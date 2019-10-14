@@ -40,8 +40,17 @@ mongodbClient.connect(url, {useNewUrlParser: true, useUnifiedTopology: true}, (e
     })
 
     // POST DATA
+    /*
+        1. Kirim pesan error jika name, role , age kosong
+            template err = Tolong isi data 'name', 'role', 'age'
+    */
     app.post('/users',(req, res)=>{
         let {name, role, age} = req.body
+        if(name|| role ||age === false){
+            return res.send({err :'Tolong isi data name,role,age'})
+        }
+
+
         db.collection('users').insertOne(
             {    
                 name, 
@@ -81,25 +90,50 @@ mongodbClient.connect(url, {useNewUrlParser: true, useUnifiedTopology: true}, (e
 
 
     // get one data with 'QUERY'
+     /*
+        1. Kirim pesan error jika user tidak memberikan salah satu atau kedua data (name, age)
+            template err = Mohon isi data untuk properti 'name', 'age'
+        
+        2. Jika data tidak ditemukan, kirim object dg property 'err'
+            templat err = Tidak dapat menemukan user dengan nama ... dan umur ...
+    */
     app.get('/users/one', (req,res) =>{
     //   req.query = {name, age}
         let {age,name} =req.query
 
         age = parseInt(age)
+        if(!name || isNaN(age)){
+            return res.send({err : 'Mohon isi properti name, age'})
+        }
+    
         db.collection('users').findOne({name, age})
             .then(resp => {
+                if(!resp){
+                   return res.send({err :`tidak dapat menemukan user dengan nama ${name} dan umur ${age}`})
+                }
                 res.send(resp)
             }).catch (err => {
-                res.send('Data not found')
+                res.send(err)
             })
     })
 
     // GET All Data with 'QUERY'
+    /*
+        1. Kirim pesan error ketika age kosong / tidak di isi data
+        2. Jika data tidak ditemukan maka kirim respon dalam bentuk object yang memiliki propert 'err'
+            templat pesan err = Data dengan umur ... tidak di temukan
+    */
     app.get('/users/many',(req,res) => {
         let { age} = req.query
         age= parseInt(age)
+        if(isNaN(age)){
+            return res.send({err :'Age tolong di isi'})
+        }
         db.collection('users').find({age}).toArray()
             .then(resp =>{
+                if(resp.length ===0){
+                    return res.send({err:`Data dengan umur ${age} tidak di temukan`})
+                }
                 res.send(resp)
             }).catch(err => {
                 res.send(err)
@@ -129,7 +163,16 @@ mongodbClient.connect(url, {useNewUrlParser: true, useUnifiedTopology: true}, (e
     })
 
 
-
+    // DELETE ONE USER BY AGE
+    app.delete('/users/:age', (req, res) => {
+        age = parseInt(req.params.age)
+        db.collection('users').deleteOne({age : age})
+        .then(resp => {
+            res.send(resp)
+        }).catch(err => {
+            res.send(err)
+        })
+    })
 })
 
 
